@@ -6,7 +6,7 @@ namespace KreiranjeNaloga
 {
     internal class Program
     {
-        private const string OutputFileName = "nalog_za_uplatu.xml";
+        private const string OutputFileName = "rezultat.xml";
         private static string? _companyName;
         private static string? _companyCity;
         private static string? _accountId;
