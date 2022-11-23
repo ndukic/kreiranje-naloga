@@ -1,6 +1,5 @@
 ﻿using ClosedXML.Excel;
 using Microsoft.Extensions.Configuration;
-using System.Reflection;
 using System.Xml.Linq;
 
 namespace KreiranjeNaloga
@@ -45,14 +44,16 @@ namespace KreiranjeNaloga
             do
             {
                 var cell = row.FirstCellUsed();
-                var naziv = cell.Value;
-                var adresa = (cell = cell.CellRight()).Value;
-                var tekuci = (cell = cell.CellRight()).Value;
-                var sifraUplate = (cell = cell.CellRight()).Value;
-                var model = (cell = cell.CellRight()).Value;
-                var pozivNaBroj = (cell = cell.CellRight()).Value;
-                var iznos = (cell = cell.CellRight()).Value;
-                var svrhaUplate = (cell = cell.CellRight()).Value;
+                var naziv = cell.Value.ToString();
+                var adresa = (cell = cell.CellRight()).Value.ToString();
+                var tekuci = (cell = cell.CellRight()).Value.ToString();
+                var sifraUplate = (cell = cell.CellRight()).Value.ToString();
+                var model = (cell = cell.CellRight()).Value.ToString();
+                var pozivNaBroj = (cell = cell.CellRight()).Value.ToString();
+                var iznos = (cell = cell.CellRight()).Value.ToString() ?? "0.00";
+                var svrhaUplate = (cell = cell.CellRight()).Value.ToString();
+
+                iznos = iznos.Contains('.') ? iznos : $"{iznos}.00";
 
                 XElement paymentOrder = CreateOrder(naziv, adresa, tekuci, sifraUplate, model, pozivNaBroj, iznos, svrhaUplate);
 
@@ -63,6 +64,9 @@ namespace KreiranjeNaloga
             xml.Add(paymentOrders);
 
             WriteToFile(xml);
+
+            Console.Write("Pritisnuti bilo koji taster za kraj: ");
+            Console.ReadKey();
         }
 
         private static bool TryOpenSheet(string inputFileName, out XLWorkbook? wb)
@@ -70,7 +74,7 @@ namespace KreiranjeNaloga
             wb = null;
             try
             {
-                wb = new XLWorkbook("TABELA PLAĆANJA novembar.xlsx");
+                wb = new XLWorkbook(inputFileName);
                 return true;
             }
             catch (Exception e)
@@ -117,9 +121,10 @@ namespace KreiranjeNaloga
 
         private static string? FindExcelSheetFile()
         {
-            var currentDirectoryName = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+            var currentDirectoryName = Directory.GetCurrentDirectory();
             string[] files = Directory.GetFiles(currentDirectoryName, "*.xlsx");
             var inputFileName = files.FirstOrDefault();
+            Console.WriteLine($"Naziv pronadjenog fajla: {inputFileName}");
             return inputFileName;
         }
 
@@ -156,48 +161,12 @@ namespace KreiranjeNaloga
                 var file = File.Open(OutputFileName, FileMode.OpenOrCreate);
                 xml.Save(file);
                 Console.WriteLine($"Fajl je uspesno kreiran: \"{OutputFileName}\"");
-                Console.ReadKey();
             }
             catch (Exception)
             {
                 Console.WriteLine($"Greska prilikom kreiranja fajla \"{OutputFileName}\"");
                 Console.ReadKey();
             }
-        }
-
-        private static XDocument CreateXML(XElement? companyInfo, XElement? accountinfo)
-        {
-            return new XDocument(
-                new XDeclaration("1.0", "UTF-8", ""),
-                new XElement("pmtorderrq",
-                    new XElement("pmtorder",
-                        companyInfo,
-                        accountinfo,
-                        new XElement("payeecompanyinfo",
-                            new XElement("name", "TEST"),
-                            new XElement("city", "GRAD")
-                        ),
-                        new XElement("payeeaccountinfo",
-                            new XElement("acctid", "330-1111111111111-58"),
-                            new XElement("bankid", "330"),
-                            new XElement("bankname", "TEST TEST")
-                        ),
-                        new XElement("trnuid", ""),
-                        new XElement("dtdue", "2022-11-04"),
-                        new XElement("trnamt", "12345.50"),
-                        new XElement("trnplace", "online"),
-                        new XElement("purpose", "Test"),
-                        new XElement("purposecode", "248"),
-                        new XElement("curdef", "RSD"),
-                        new XElement("refmodel", ""),
-                        new XElement("refnumber", ""),
-                        new XElement("payeerefmodel", "97"),
-                        new XElement("payeerefnumber", "3591000000040654654"),
-                        new XElement("urgency", "ACH"),
-                        new XElement("priority", "50")
-                    )
-                )
-            );
         }
     }
 }
