@@ -8,3 +8,7 @@ Uputstvo:
 Vazno: Ukoliko celije koje sadrze brojeve promene format, potrebno je podesiti format na "Text" da bi vrednost na uplatnici bila nepromenjena
 
 ![image](https://user-images.githubusercontent.com/9849918/203527058-21d5f4ce-3051-43ec-9790-be9de4828a0e.png)
+
+# Download
+
+https://github.com/ndukic/kreiranje-naloga/releases/download/v0.0.1/win-x64.zip
