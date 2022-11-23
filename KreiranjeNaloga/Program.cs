@@ -1,28 +1,126 @@
-﻿using Microsoft.Extensions.Configuration;
+﻿using ClosedXML.Excel;
+using Microsoft.Extensions.Configuration;
+using System.Reflection;
 using System.Xml.Linq;
 
 namespace KreiranjeNaloga
 {
     internal class Program
     {
-        private const string Path = "nalog_za_uplatu.xml";
+        private const string OutputFileName = "nalog_za_uplatu.xml";
         private static string? _companyName;
         private static string? _companyCity;
         private static string? _accountId;
         private static string? _bankId;
         private static string? _bankName;
-        private static XElement _companyInfo;
-        private static XElement _accountinfo;
+        private static XElement? _companyInfo;
+        private static XElement? _accountinfo;
 
         static async Task Main(string[] args)
         {
             Init();
 
-            // TODO: Read and parse excel sheet
+            var inputFileName = FindExcelSheetFile();
+            if (string.IsNullOrEmpty(inputFileName))
+            {
+                Console.WriteLine($"Nije pronadjen nijedan *.xlsx fajl");
+                Console.ReadKey();
+                return;
+            }
 
-            XDocument xml = CreateXML(_companyInfo, _accountinfo);
+            if (!TryOpenSheet(inputFileName, out var wb))
+            {
+                Console.WriteLine($"Nije moguce otvoriti fajl {inputFileName}");
+                Console.ReadKey();
+                return;
+            }
+            var ws = wb.Worksheets.FirstOrDefault();
+            var firstRowUsed = ws.FirstRowUsed();
+            var row = firstRowUsed.RowBelow();
+            
+            var xml = new XDocument();
+            xml.Declaration = new XDeclaration("1.0", "UTF-8", "");
+            var paymentOrders = new XElement("pmtorderrq");
+
+            do
+            {
+                var cell = row.FirstCellUsed();
+                var naziv = cell.Value;
+                var adresa = (cell = cell.CellRight()).Value;
+                var tekuci = (cell = cell.CellRight()).Value;
+                var sifraUplate = (cell = cell.CellRight()).Value;
+                var model = (cell = cell.CellRight()).Value;
+                var pozivNaBroj = (cell = cell.CellRight()).Value;
+                var iznos = (cell = cell.CellRight()).Value;
+                var svrhaUplate = (cell = cell.CellRight()).Value;
+
+                XElement paymentOrder = CreateOrder(naziv, adresa, tekuci, sifraUplate, model, pozivNaBroj, iznos, svrhaUplate);
+
+                paymentOrders.Add(paymentOrder);
+            }
+            while (!(row = row.RowBelow()).IsEmpty() && !row.FirstCellUsed().HasFormula);
+
+            xml.Add(paymentOrders);
 
             WriteToFile(xml);
+        }
+
+        private static bool TryOpenSheet(string inputFileName, out XLWorkbook? wb)
+        {
+            wb = null;
+            try
+            {
+                wb = new XLWorkbook("TABELA PLAĆANJA novembar.xlsx");
+                return true;
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message);
+                return false;
+            }
+        }
+
+        private static XElement CreateOrder(object naziv, object adresa, object tekuci, object sifraUplate, object model, object pozivNaBroj, object iznos, object svrhaUplate)
+        {
+            var payeecompanyinfo = new XElement("payeecompanyinfo",
+                new XElement("name", naziv),
+                new XElement("city", adresa)
+            );
+
+            var payeeaccountinfo = new XElement("payeeaccountinfo",
+                new XElement("acctid", tekuci),
+                new XElement("bankid", ((string)tekuci).Substring(0, 3)),
+                new XElement("bankname", $"{naziv} {adresa}")
+            );
+
+            var paymentOrder = new XElement("pmtorder",
+                _companyInfo,
+                _accountinfo,
+                payeecompanyinfo,
+                payeeaccountinfo,
+                new XElement("trnuid", ""),
+                new XElement("dtdue", DateOnly.FromDateTime(DateTime.Now).ToString("yyyy-MM-dd")), // "2022-11-04"
+                new XElement("trnamt", iznos),
+                new XElement("trnplace", "online"),
+                new XElement("purpose", svrhaUplate),
+                new XElement("purposecode", sifraUplate),
+                new XElement("curdef", "RSD"),
+                new XElement("refmodel", ""),
+                new XElement("refnumber", ""),
+                new XElement("payeerefmodel", model),
+                new XElement("payeerefnumber", pozivNaBroj),
+                new XElement("urgency", "ACH"),
+                new XElement("priority", "50")
+            );
+            return paymentOrder;
+        }
+
+        private static string? FindExcelSheetFile()
+        {
+            var currentDirectoryName = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+            string[] files = Directory.GetFiles(currentDirectoryName, "*.xlsx");
+            var inputFileName = files.FirstOrDefault();
+            return inputFileName;
         }
 
         private static void Init()
@@ -55,17 +153,19 @@ namespace KreiranjeNaloga
         {
             try
             {
-                var file = File.Open(Path, FileMode.OpenOrCreate);
+                var file = File.Open(OutputFileName, FileMode.OpenOrCreate);
                 xml.Save(file);
-                Console.WriteLine($"Fajl je uspesno kreiran: \"{Path}\"");
+                Console.WriteLine($"Fajl je uspesno kreiran: \"{OutputFileName}\"");
+                Console.ReadKey();
             }
             catch (Exception)
             {
-                Console.WriteLine($"Greska prilikom kreiranja fajla \"{Path}\"");
+                Console.WriteLine($"Greska prilikom kreiranja fajla \"{OutputFileName}\"");
+                Console.ReadKey();
             }
         }
 
-        private static XDocument CreateXML(XElement companyInfo, XElement accountinfo)
+        private static XDocument CreateXML(XElement? companyInfo, XElement? accountinfo)
         {
             return new XDocument(
                 new XDeclaration("1.0", "UTF-8", ""),
