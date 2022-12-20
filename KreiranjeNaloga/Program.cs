@@ -15,7 +15,7 @@ namespace KreiranjeNaloga
         private static XElement? _companyInfo;
         private static XElement? _accountinfo;
 
-        static async Task Main(string[] args)
+        static void Main(string[] args)
         {
             Init();
 
@@ -27,7 +27,7 @@ namespace KreiranjeNaloga
                 return;
             }
 
-            if (!TryOpenSheet(inputFileName, out var wb))
+            if (!TryOpenSheet(inputFileName, out var wb) || wb == null)
             {
                 Console.WriteLine($"Nije moguce otvoriti fajl {inputFileName}");
                 Console.ReadKey();
@@ -53,6 +53,13 @@ namespace KreiranjeNaloga
                 var iznos = (cell = cell.CellRight()).Value.ToString() ?? "0.00";
                 var svrhaUplate = (cell = cell.CellRight()).Value.ToString();
 
+                if(!TryFixAndValidateBankAccountNumber(ref tekuci))
+                {
+                    Console.WriteLine($"Broj racuna {tekuci} za primaoca {naziv} nije ispravan");
+                    Console.ReadKey();
+                    return;
+                }
+
                 iznos = iznos.Contains('.') ? iznos : $"{iznos}.00";
 
                 XElement paymentOrder = CreateOrder(naziv, adresa, tekuci, sifraUplate, model, pozivNaBroj, iznos, svrhaUplate);
@@ -67,6 +74,37 @@ namespace KreiranjeNaloga
 
             Console.Write("Pritisnuti bilo koji taster za kraj: ");
             Console.ReadKey();
+        }
+
+        private static bool TryFixAndValidateBankAccountNumber(ref string? tekuci)
+        {
+            if (string.IsNullOrEmpty(tekuci))
+            {
+                return false;
+            }
+            var parts = tekuci.Split('-');
+            if (parts.Length != 3)
+            {
+                return false;
+            }
+            if (parts[1].Length < 13)
+            {
+                tekuci = AddLeadingZeroes(parts);
+            }
+
+            return true;
+        }
+
+        private static string? AddLeadingZeroes(string[] parts)
+        {
+            var brojNulaKojiNedostaje = 13 - parts[1].Length;
+            var srednjiDeoTekucegRacuna = parts[1];
+            for (int i = 0; i < brojNulaKojiNedostaje; i++)
+            {
+                srednjiDeoTekucegRacuna = $"0{srednjiDeoTekucegRacuna}";
+            }
+
+            return $"{parts[0]}-{srednjiDeoTekucegRacuna}-{parts[2]}";
         }
 
         private static bool TryOpenSheet(string inputFileName, out XLWorkbook? wb)
