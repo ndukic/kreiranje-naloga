@@ -7,20 +7,7 @@ on:
 jobs:
   release:
     name: Release
-    strategy:
-      matrix:
-        kind: ['linux', 'windows', 'macOS']
-        include:
-          #- kind: linux
-          #  os: ubuntu-latest
-          #  target: linux-x64
-          - kind: windows
-            os: windows-latest
-            target: win-x64
-          #- kind: macOS
-          #  os: macos-latest
-          #  target: osx-x64
-    runs-on: ${{ matrix.os }}
+    runs-on: windows-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v1
@@ -34,18 +21,13 @@ jobs:
         shell: bash
         run: |
           tag=$(git describe --tags --abbrev=0)
-          release_name="KreiranjeNaloga-$tag-${{ matrix.target }}"
+          release_name="KreiranjeNaloga-$tag-win-64"
 
           # Build everything
-          dotnet publish --runtime "${{ matrix.target }}" -c Release -o "$release_name" -p:PublishReadyToRun=false -p:PublishSingleFile=true -p:PublishTrimmed=true --self-contained true -p:IncludeNativeLibrariesForSelfExtract=true
+          dotnet publish --runtime win-x64 -c Release -o "$release_name" -p:PublishReadyToRun=false -p:PublishSingleFile=true -p:PublishTrimmed=true --self-contained true -p:IncludeNativeLibrariesForSelfExtract=true
 
           # Pack files
-          if [ "${{ matrix.target }}" == "win-x64" ]; then
-            # Pack to zip for Windows
-            7z a -tzip "${release_name}.zip" "./${release_name}/*"
-          else
-          tar czvf "${release_name}.tar.gz" "$release_name"
-          fi
+          7z a -tzip "${release_name}.zip" "./${release_name}/*"
 
           # Delete output directory
           rm -r "$release_name"
