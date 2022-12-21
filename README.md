@@ -11,4 +11,4 @@ Vazno: Ukoliko celije koje sadrze brojeve promene format, potrebno je podesiti f
 
 # Download
 
-https://github.com/ndukic/kreiranje-naloga/releases/download/v0.0.1/win-x64.zip
+https://github.com/ndukic/kreiranje-naloga/releases/latest
