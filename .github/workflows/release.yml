@@ -1,6 +1,8 @@
 name: Publish
 
 on:
+  release:
+    types: [published]
   push:
     branches: 
       - master
@@ -21,8 +23,8 @@ jobs:
       - name: Build
         shell: bash
         run: |
-          tag=$(git describe --tags --abbrev=0)
-          release_name="KreiranjeNaloga-$tag-win-64"
+          tag=$(git describe --tags --abbrev=0) || $(git rev-parse --short HEAD)
+          release_name="App-$tag-win-64"
 
           # Build everything
           dotnet publish --runtime win-x64 -c Release -o "$release_name" -p:PublishReadyToRun=false -p:PublishSingleFile=true -p:PublishTrimmed=true --self-contained true -p:IncludeNativeLibrariesForSelfExtract=true
@@ -36,6 +38,6 @@ jobs:
       - name: Publish
         uses: softprops/action-gh-release@v1
         with:
-          files: "KreiranjeNaloga*"
+          files: "App*"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
