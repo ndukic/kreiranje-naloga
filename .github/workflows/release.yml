@@ -3,9 +3,6 @@ name: Publish
 on:
   release:
     types: [published]
-  push:
-    branches: 
-      - master
 
 jobs:
   release:
@@ -23,18 +20,14 @@ jobs:
       - name: Build
         shell: bash
         run: |
-          tag=$(git describe --tags --abbrev=0) || $(git rev-parse --short HEAD)
+          tag=$(git describe --tags --abbrev=0)
           release_name="App-$tag-win-64"
-
           # Build everything
           dotnet publish --runtime win-x64 -c Release -o "$release_name" -p:PublishReadyToRun=false -p:PublishSingleFile=true -p:PublishTrimmed=true --self-contained true -p:IncludeNativeLibrariesForSelfExtract=true
-
           # Pack files
           7z a -tzip "${release_name}.zip" "./${release_name}/*"
-
           # Delete output directory
           rm -r "$release_name"
-
       - name: Publish
         uses: softprops/action-gh-release@v1
         with:
