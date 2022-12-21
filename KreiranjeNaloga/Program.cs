@@ -1,5 +1,6 @@
 ﻿using ClosedXML.Excel;
 using Microsoft.Extensions.Configuration;
+using Newtonsoft.Json;
 using System.Xml.Linq;
 
 namespace KreiranjeNaloga
@@ -14,6 +15,8 @@ namespace KreiranjeNaloga
         private static string? _bankName;
         private static XElement? _companyInfo;
         private static XElement? _accountinfo;
+        // https://www.servisinfo.com/biz/sifre-placanja
+        private static Dictionary<string, string>? _sifrePlacanja = null;
 
         static void Main(string[] args)
         {
@@ -52,8 +55,9 @@ namespace KreiranjeNaloga
                 var pozivNaBroj = (cell = cell.CellRight()).Value.ToString();
                 var iznos = (cell = cell.CellRight()).Value.ToString() ?? "0.00";
                 var svrhaUplate = (cell = cell.CellRight()).Value.ToString();
+                OverrideSvrhaUplate(sifraUplate, ref svrhaUplate);
 
-                if(!TryFixAndValidateBankAccountNumber(ref tekuci))
+                if (!TryFixAndValidateBankAccountNumber(ref tekuci))
                 {
                     Console.WriteLine($"Broj racuna {tekuci} za primaoca {naziv} nije ispravan");
                     Console.ReadKey();
@@ -74,6 +78,17 @@ namespace KreiranjeNaloga
 
             Console.Write("Pritisnuti bilo koji taster za kraj: ");
             Console.ReadKey();
+        }
+
+        private static void OverrideSvrhaUplate(string? sifraUplate, ref string? svrhaUplate)
+        {
+            if (string.IsNullOrEmpty(svrhaUplate) &&
+                                !string.IsNullOrEmpty(sifraUplate) &&
+                                _sifrePlacanja != null &&
+                                _sifrePlacanja.TryGetValue(sifraUplate, out string? defaultSvrhaPlacanja))
+            {
+                svrhaUplate = defaultSvrhaPlacanja;
+            }
         }
 
         private static bool TryFixAndValidateBankAccountNumber(ref string? tekuci)
@@ -190,6 +205,24 @@ namespace KreiranjeNaloga
                     new XElement("bankid", _bankId),
                     new XElement("bankname", _bankName)
                 );
+
+            TryParseSifrePlacanja();
+        }
+
+        private static void TryParseSifrePlacanja()
+        {
+            using (StreamReader r = new StreamReader("sifreplacanja.json"))
+            {
+                string jsonString = r.ReadToEnd();
+                _sifrePlacanja = JsonConvert.DeserializeObject<IEnumerable<SifraPlacanja>>(jsonString)
+                    .ToDictionary(t => t.Sifra, t => t.Opis);
+            }
+        }
+
+        private class SifraPlacanja
+        {
+            public string Sifra { get; set; }
+            public string Opis { get; set; }
         }
 
         private static void WriteToFile(XDocument xml)
