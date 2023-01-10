@@ -1,6 +1,7 @@
 ﻿using ClosedXML.Excel;
 using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json;
+using System.Text.RegularExpressions;
 using System.Xml.Linq;
 
 namespace KreiranjeNaloga
@@ -56,6 +57,7 @@ namespace KreiranjeNaloga
                 var iznos = (cell = cell.CellRight()).Value.ToString() ?? "0.00";
                 var svrhaUplate = (cell = cell.CellRight()).Value.ToString();
                 OverrideSvrhaUplate(sifraUplate, ref svrhaUplate);
+                FormatIznos(ref iznos);
 
                 if (!TryFixAndValidateBankAccountNumber(ref tekuci))
                 {
@@ -63,8 +65,6 @@ namespace KreiranjeNaloga
                     Console.ReadKey();
                     return;
                 }
-
-                iznos = iznos.Contains('.') ? iznos : $"{iznos}.00";
 
                 XElement paymentOrder = CreateOrder(naziv, adresa, tekuci, sifraUplate, model, pozivNaBroj, iznos, svrhaUplate);
 
@@ -78,6 +78,16 @@ namespace KreiranjeNaloga
 
             Console.Write("Pritisnuti bilo koji taster za kraj: ");
             Console.ReadKey();
+        }
+
+        private static void FormatIznos(ref string iznos)
+        {
+            iznos = Regex.Replace(iznos, @"[^0-9\.]", "");
+            if (Decimal.TryParse(iznos, out var result))
+            {
+                iznos = Math.Round(result, 2).ToString();
+            }
+            iznos = iznos.Contains('.') ? iznos : $"{iznos}.00";
         }
 
         private static void OverrideSvrhaUplate(string? sifraUplate, ref string? svrhaUplate)
